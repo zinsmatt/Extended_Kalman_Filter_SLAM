@@ -6,6 +6,9 @@
 #define TO_DEGREES(x) x * 57.2957795131f
 #define TO_RADIANS(x) x * 0.01745329251f
 
+const float ROBOT_FOV = TO_RADIANS(60);
+const float ROBOT_RANGE_VIEW = 150;
+
 class Robot
 {
 public:
@@ -25,11 +28,17 @@ public:
   float orientation() const { return orientation_; }
   float& orientation() { return orientation_; }
 
+  float fov() const { return fov_; }
+  float range() const { return range_; }
+
+
   void move(float dist);
 
  private:
   Eigen::Vector2f pos_;
   float orientation_;
+  float fov_ = ROBOT_FOV;
+  float range_ = ROBOT_RANGE_VIEW;
 };
 
 #endif // ROBOT_H

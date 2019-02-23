@@ -33,14 +33,19 @@ private:
   const unsigned int FPS = 60;      // this should not be changed. Otherwise all the control parameters will need to be adjusted
   // Graphics parameters
   const int LANDMARKS_SIZE = 10;
+
   const int ROBOT_SIZE = 10;
   const int ROBOT_THICKNESS = 2;
-  const sf::Color BACKGROUND_COLOR = sf::Color::Black;
+  const int ROBOT_VIEW_THICKNESS = 2;
   const sf::Color ROBOT_COLOR = sf::Color::Green;
+  const sf::Color ROBOT_VIEW_COLOR = sf::Color::Yellow;
+
+
+  const sf::Color BACKGROUND_COLOR = sf::Color::Black;
 
   // Controls parameters
   const float ROBOT_ROTATION_STEP = 0.05f;   // in degrees
-  const float ROBOT_MOVE_STEP = 2.5f;       // in world units (correspond to pixel)
+  const float ROBOT_MOVE_STEP = 2.5f;        // in world units (correspond to pixel)
 };
 
 #endif // WINDOW_H

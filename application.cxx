@@ -7,7 +7,10 @@
 Application::Application(unsigned int w, unsigned int h, std::string const& str) :
   width(w), height(h), name(str), robot(nullptr)
 {
-  win.create(sf::VideoMode(width, height), name);
+  sf::ContextSettings settings;
+  settings.antialiasingLevel = 8;
+
+  win.create(sf::VideoMode(width, height), name, sf::Style::Default, settings);
   win.setFramerateLimit(FPS);
 
 }
@@ -92,9 +95,26 @@ void Application::render_robot()
     rect.setFillColor(ROBOT_COLOR);
     rect.setPosition(robot->x(), robot->y());
 
+    sf::ConvexShape convex;
+    convex.setFillColor(sf::Color::Transparent);
+    convex.setOutlineThickness(ROBOT_VIEW_THICKNESS);
+    convex.setOutlineColor(ROBOT_VIEW_COLOR);
+    size_t range_view_points = 12;
+    convex.setPointCount(range_view_points + 1);
+    convex.setPoint(0, sf::Vector2f(robot->x(), robot->y()));
+    float angle_step = robot->fov() / (range_view_points - 1);
+    float half_fov = robot->fov() / 2;
+    size_t index = 1;
+    for (float a = -half_fov; a <= half_fov; a += angle_step)
+    {
+      sf::Vector2f p(robot->x() + robot->range() * std::cos(a + robot->orientation()),
+                     robot->y() + robot->range() * std::sin(a + robot->orientation()));
+      convex.setPoint(index++, p);
+    }
+
     win.draw(circle);
     win.draw(rect);
-
+    win.draw(convex);
   }
 }
 
