@@ -12,6 +12,8 @@ add_executable(${PROJECT_NAME}
     main.cxx
     application.cxx
     application.h
+    landmark.cxx
+    landmark.h
     )
 
 target_link_libraries(${PROJECT_NAME} ${SFML_LIBS} sfml-graphics sfml-window sfml-system)
