@@ -30,7 +30,8 @@ private:
   std::unique_ptr<Robot> robot;
   std::vector< std::unique_ptr<Landmark> > landmarks;
 
-  // Grapphics parameters
+  const unsigned int FPS = 60;      // this should not be changed. Otherwise all the control parameters will need to be adjusted
+  // Graphics parameters
   const int LANDMARKS_SIZE = 10;
   const int ROBOT_SIZE = 10;
   const int ROBOT_THICKNESS = 2;

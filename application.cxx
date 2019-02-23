@@ -8,6 +8,7 @@ Application::Application(unsigned int w, unsigned int h, std::string const& str)
   width(w), height(h), name(str), robot(nullptr)
 {
   win.create(sf::VideoMode(width, height), name);
+  win.setFramerateLimit(FPS);
 
 }
 
@@ -17,6 +18,7 @@ Application::~Application()
 
 void Application::exec()
 {
+  bool forward= false, left = false, right = false, backward = false;
   while (win.isOpen())
   {
     sf::Event event;
@@ -24,28 +26,39 @@ void Application::exec()
     {
       if (event.type == sf::Event::Closed)
         win.close();
-
-      if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
+      if (event.type == sf::Event::KeyPressed)
       {
-        robot->orientation() -= ROBOT_ROTATION_STEP;
-        std::cout << "left" << std::endl;
+        if (event.key.code == sf::Keyboard::Left)
+          left = true;
+        if (event.key.code == sf::Keyboard::Right)
+          right = true;
+        if (event.key.code == sf::Keyboard::Up)
+          forward = true;
+        if (event.key.code == sf::Keyboard::Down)
+          backward = true;
       }
-      if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
+      if (event.type == sf::Event::KeyReleased)
       {
-        robot->orientation() += ROBOT_ROTATION_STEP;
-        std::cout << "right" << std::endl;
-      }
-      if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
-      {
-        robot->move(ROBOT_MOVE_STEP);
-        std::cout << "up" << std::endl;
-      }
-      if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
-      {
-        robot->move(-ROBOT_MOVE_STEP);
+        if (event.key.code == sf::Keyboard::Left)
+          left = false;
+        if (event.key.code == sf::Keyboard::Right)
+          right = false;
+        if (event.key.code == sf::Keyboard::Up)
+          forward = false;
+        if (event.key.code == sf::Keyboard::Down)
+          backward = false;
       }
     }
     win.clear(BACKGROUND_COLOR);
+
+    if (left)
+      robot->orientation() -= ROBOT_ROTATION_STEP;
+    if (right)
+      robot->orientation() += ROBOT_ROTATION_STEP;
+    if (forward)
+      robot->move(ROBOT_MOVE_STEP);
+    if (backward)
+      robot->move(-ROBOT_MOVE_STEP);
 
     render_robot();
     render_landmarks();
