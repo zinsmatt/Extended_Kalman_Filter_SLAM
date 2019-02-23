@@ -8,6 +8,8 @@ int main()
 {
   Application app(800, 600, "EKF SLAM");
 
+  app.init_robot(400, 300, 0);
+
   app.add_landmark(100, 100);
   app.add_landmark(200, 100);
   app.add_landmark(100, 400);

@@ -15,6 +15,10 @@ add_executable(${PROJECT_NAME}
     application.h
     landmark.cxx
     landmark.h
+    robot.cxx
+    robot.h
     )
 
-target_link_libraries(${PROJECT_NAME} ${SFML_LIBS} sfml-graphics sfml-window sfml-system)
+target_link_libraries(${PROJECT_NAME}
+    ${SFML_LIBS} sfml-graphics sfml-window sfml-system
+    Eigen3::Eigen)
