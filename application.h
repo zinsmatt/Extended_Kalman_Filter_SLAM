@@ -32,7 +32,9 @@ private:
 
   const unsigned int FPS = 60;      // this should not be changed. Otherwise all the control parameters will need to be adjusted
   // Graphics parameters
-  const int LANDMARKS_SIZE = 10;
+  const int LANDMARK_SIZE = 10;
+  const sf::Color LANDMARK_COLOR = sf::Color::White;
+  const sf::Color LANDMARK_OBSERVED_COLOR = sf::Color::Red;
 
   const int ROBOT_SIZE = 10;
   const int ROBOT_THICKNESS = 2;

@@ -55,9 +55,9 @@ void Application::exec()
     win.clear(BACKGROUND_COLOR);
 
     if (left)
-      robot->orientation() -= ROBOT_ROTATION_STEP;
+      robot->turn(-ROBOT_ROTATION_STEP);
     if (right)
-      robot->orientation() += ROBOT_ROTATION_STEP;
+      robot->turn(ROBOT_ROTATION_STEP);
     if (forward)
       robot->move(ROBOT_MOVE_STEP);
     if (backward)
@@ -120,11 +120,17 @@ void Application::render_robot()
 
 void Application::render_landmarks()
 {
-  for (auto& l : landmarks)
+  auto observed = robot->get_observed_landmarks(landmarks);
+  for (unsigned int i = 0; i < landmarks.size(); ++i)
   {
-    sf::CircleShape circle(LANDMARKS_SIZE);
-    int m = LANDMARKS_SIZE;
-    circle.setPosition(l->x - m, l->y - m);
+    sf::CircleShape circle(LANDMARK_SIZE);
+    int m = LANDMARK_SIZE;
+    circle.setPosition(landmarks[i]->x - m, landmarks[i]->y - m);
+    if (observed[i]) {
+      circle.setFillColor(LANDMARK_OBSERVED_COLOR);
+    } else {
+      circle.setFillColor(LANDMARK_COLOR);
+    }
     win.draw(circle);
   }
 }
