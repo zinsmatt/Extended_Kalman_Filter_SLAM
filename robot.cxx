@@ -14,20 +14,18 @@ void Robot::set_orientation(float angle) {
   }
 }
 
-void Robot::turn(float angle) {
-  orientation_ += angle;
+/// update the robot assuming a forward movement with a constant velocity and a final rotation
+void Robot::update(float dt)
+{
+  orientation_ += angular_velocity_ * dt;
   if (orientation_ > PI) {
     orientation_ -= 2 * PI;
   }
   if (orientation_ < -PI) {
     orientation_ += 2 * PI;
   }
-}
-
-void Robot::move(float dist)
-{
-  pos_.x() += std::cos(orientation_) * dist;
-  pos_.y() += std::sin(orientation_) * dist;
+  pos_.x() += std::cos(orientation_) * velocity_ * dt;
+  pos_.y() += std::sin(orientation_) * velocity_ * dt;
 }
 
 std::vector<bool> Robot::get_observed_landmarks(const std::vector<std::unique_ptr<Landmark> > &landmarks)

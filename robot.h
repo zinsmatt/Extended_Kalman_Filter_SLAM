@@ -34,18 +34,17 @@ public:
 
   float orientation() const { return orientation_; }
   void set_orientation(float angle);
-  void turn(float angle);
 
   float velocity() const { return velocity_; }
   float& velocity() { return velocity_; }
 
-  float angle_velocity() const { return angle_velocity_; }
-  float& angle_velocity() { return angle_velocity_; }
+  float angular_velocity() const { return angular_velocity_; }
+  float& angular_velocity() { return angular_velocity_; }
 
   float fov() const { return fov_; }
   float range() const { return range_; }
 
-  void move(float dist);
+  void update(float dt);
 
   std::vector<bool> get_observed_landmarks(std::vector< std::unique_ptr<Landmark> >const& landmarks);
 
@@ -54,7 +53,7 @@ public:
   Eigen::Vector2f pos_;
   float orientation_;
   float velocity_ = 0;
-  float angle_velocity_ = 0;
+  float angular_velocity_ = 0;
   float fov_ = ROBOT_FOV;
   float range_ = ROBOT_RANGE_VIEW;
 };

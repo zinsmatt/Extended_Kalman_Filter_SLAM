@@ -31,6 +31,7 @@ private:
   std::vector< std::unique_ptr<Landmark> > landmarks;
 
   const unsigned int FPS = 60;      // this should not be changed. Otherwise all the control parameters will need to be adjusted
+  const float DT = 1.0f / FPS;
   // Graphics parameters
   const int LANDMARK_SIZE = 10;
   const sf::Color LANDMARK_COLOR = sf::Color::White;
@@ -46,8 +47,8 @@ private:
   const sf::Color BACKGROUND_COLOR = sf::Color::Black;
 
   // Controls parameters
-  const float ROBOT_ROTATION_STEP = 0.05f;   // in degrees
-  const float ROBOT_MOVE_STEP = 2.5f;        // in world units (correspond to pixel)
+  const float ROBOT_ROTATION_STEP = 1.5f;   // in degrees
+  const float ROBOT_MOVE_STEP = 100;        // in world units (correspond to pixel)
 };
 
 #endif // WINDOW_H

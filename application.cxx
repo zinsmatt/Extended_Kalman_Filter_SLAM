@@ -32,36 +32,29 @@ void Application::exec()
       if (event.type == sf::Event::KeyPressed)
       {
         if (event.key.code == sf::Keyboard::Left)
-          left = true;
+          robot->angular_velocity() = -ROBOT_ROTATION_STEP;
         if (event.key.code == sf::Keyboard::Right)
-          right = true;
+          robot->angular_velocity() = ROBOT_ROTATION_STEP;
         if (event.key.code == sf::Keyboard::Up)
-          forward = true;
+          robot->velocity() = ROBOT_MOVE_STEP;
         if (event.key.code == sf::Keyboard::Down)
-          backward = true;
+          robot->velocity() = -ROBOT_MOVE_STEP;
       }
       if (event.type == sf::Event::KeyReleased)
       {
         if (event.key.code == sf::Keyboard::Left)
-          left = false;
+          robot->angular_velocity() = 0;
         if (event.key.code == sf::Keyboard::Right)
-          right = false;
+          robot->angular_velocity() = 0;
         if (event.key.code == sf::Keyboard::Up)
-          forward = false;
+          robot->velocity() = 0;
         if (event.key.code == sf::Keyboard::Down)
-          backward = false;
+          robot->velocity() = 0;
       }
     }
     win.clear(BACKGROUND_COLOR);
 
-    if (left)
-      robot->turn(-ROBOT_ROTATION_STEP);
-    if (right)
-      robot->turn(ROBOT_ROTATION_STEP);
-    if (forward)
-      robot->move(ROBOT_MOVE_STEP);
-    if (backward)
-      robot->move(-ROBOT_MOVE_STEP);
+    robot->update(DT);
 
     render_robot();
     render_landmarks();
