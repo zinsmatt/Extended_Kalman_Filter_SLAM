@@ -14,6 +14,10 @@ int main()
   app.add_landmark(200, 100);
   app.add_landmark(100, 400);
   app.add_landmark(500, 500);
+  app.add_landmark(300, 250);
+  app.add_landmark(250, 100);
+  app.add_landmark(200, 400);
+  app.add_landmark(200, 350);
 
   app.exec();
 
