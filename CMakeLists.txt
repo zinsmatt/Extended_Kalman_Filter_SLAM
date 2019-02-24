@@ -13,6 +13,8 @@ add_executable(${PROJECT_NAME}
     main.cxx
     application.cxx
     application.h
+    feature.cxx
+    feature.h
     landmark.cxx
     landmark.h
     robot.cxx
