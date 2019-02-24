@@ -1,6 +1,19 @@
 #include "ekf.h"
 
 
+namespace {
+
+float normalized_angle(float a)
+{
+  if (a > PI)
+    a -= 2 * PI;
+  else if (a < -PI)
+    a += 2 * PI;
+  return a;
+}
+
+};
+
 EKF::EKF(int nb_landmarks) :
   n_landmarks(nb_landmarks),
   already_observed(std::vector<bool>(nb_landmarks, false))
@@ -9,9 +22,12 @@ EKF::EKF(int nb_landmarks) :
 
 void EKF::init(const Robot &robot)
 {
-  int n = 3 + n_landmarks * 3;
-  mu = Eigen::MatrixXf::Zero(n, 1);
-  cov = Eigen::MatrixXf::Ones(n, n) * 1e10;
+  const int N = 3 + n_landmarks * 2;
+  mu = Eigen::MatrixXf::Zero(N, 1);
+  cov = Eigen::MatrixXf::Zero(N, N);
+  std::cout << "EKF initialized " << "\n";
+  std::cout << "mu = " << mu.size() << "\n";
+  std::cout << "cov = " << cov.size() << "\n";
 
   // initialize state vector
   mu(0) = robot.x();
@@ -19,20 +35,22 @@ void EKF::init(const Robot &robot)
   mu(2) = robot.orientation();
 
   // initialize covariance matrix (robot position is certain at start)
-  for (unsigned int i = 0; i < 3; ++i) {
-    for (unsigned int j = 0; j < 3; ++j) {
-      cov(i, j) = 0;
-    }
+  for (int i = 3; i < N; ++i)
+  {
+    cov(i, i) = 1e5;
   }
 }
 
-const float SENSOR_RANGE_NOISE = 0.01f;
-const float SENSOR_BEARING_NOISE = 0.001f;
+const float SENSOR_RANGE_NOISE = 0.1f;
+const float SENSOR_BEARING_NOISE = 0.01f;
 
 void EKF::update(float v, float w, float dt, std::vector<Feature> const& features)
 {
   const float EPS = 1e-4f;
-  Eigen::MatrixXf F = Eigen::MatrixXf::Zero(3, 3 * n_landmarks);
+  const int N = 3 + 2 * n_landmarks;
+
+  // maps the robot motion to N * N
+  Eigen::MatrixXf F = Eigen::MatrixXf::Zero(3, N);
   F(0, 0) = 1;
   F(1, 1) = 1;
   F(2, 2) = 1;
@@ -41,14 +59,15 @@ void EKF::update(float v, float w, float dt, std::vector<Feature> const& feature
   Eigen::MatrixXf cov_pred;   //
   Eigen::MatrixXf G;      // motion Jacobian
 
-  Eigen::Matrix3f Q = Eigen::Matrix3f::Zero();
+  // Measurement noise
+  Eigen::Matrix2f Q = Eigen::Matrix2f::Zero();
   Q(0, 0) = SENSOR_RANGE_NOISE;
   Q(1, 1) = SENSOR_BEARING_NOISE;
-  Q(2, 2) = 0; //SENSOR_SIGNATURE_NOISE
 
   if (std::abs(w) > EPS)
   {
-    float r = std::abs(v / w);
+    // in case of angular velocity
+    float r = v / w;
     float motion_x = -r * std::sin(mu(2)) + r * std::sin(mu(2) + w * dt);
     float motion_y = r * std::cos(mu(2)) - r * std::cos(mu(2) + w * dt);
     float delta_orientation = w * dt;
@@ -61,58 +80,104 @@ void EKF::update(float v, float w, float dt, std::vector<Feature> const& feature
     g(0, 2) = -r * std::cos(mu(2)) + r * std::cos(mu(2) + w * dt);
     g(1, 2) = -r * std::sin(mu(2)) + r * std::sin(mu(2) + w * dt);
 
-    G = Eigen::MatrixXf::Identity(n_landmarks, n_landmarks) + F.transpose() * g * F;
+    G = Eigen::MatrixXf::Identity(N, N) + F.transpose() * g * F;
 
-    cov_pred = G.transpose() * cov * G;    // no motion noise for now
+    cov_pred = G * cov * G.transpose();    // no motion noise for now
+  }
+  else
+  {
+    // no angular velocity
+    float motion_x = v * dt * std::cos(mu(2));
+    float motion_y = v * dt * std::sin(mu(2));
 
+    mu_pred(0) += motion_x;
+    mu_pred(1) += motion_y;
+
+    Eigen::Matrix3f g = Eigen::Matrix3f::Zero();
+    g(0, 2) = -v * dt * std::sin(mu(2));
+    g(1, 2) = v * dt * std::cos(mu(2));
+
+    G = Eigen::MatrixXf::Identity(N, N) + F.transpose() * g * F;
+    cov_pred = G * cov * G.transpose();
+  }
+
+
+    // ****************************
+    // Correction step
+    // ****************************
+  Eigen::MatrixXf mu_correction = Eigen::MatrixXf::Zero(mu.rows(), mu.cols());
+  Eigen::MatrixXf cov_correction = Eigen::MatrixXf::Zero(cov.rows(), cov.cols());
     // for each feature
     for (auto const& f : features)
     {
       int j = f.id;
+//      std::cout << "feature " << j << std::endl;
+//      std::cout << "range bearing  = " << f.range << " " << f.bearing << std::endl;
 
-      int landmark_idx = 3 + 3 * j;
+      int landmark_idx = 3 + 2 * j;
       if (already_observed[j] == false)
       {
+//        std::cout << "feature first time observed" << std::endl;
         // better estimate than (0, 0, 0) when the landmark is observed for the first time
         mu_pred(landmark_idx) = mu_pred(0) + f.range * std::cos(f.bearing + mu_pred(2));
         mu_pred(landmark_idx + 1) = mu_pred(1) + f.range * std::sin(f.bearing + mu_pred(2));
-        mu_pred(landmark_idx + 2) = f.s;
         already_observed[j] = true;
+//        std::cout << "init features state " << mu_pred(landmark_idx) << " " << mu_pred(landmark_idx+1) << std::endl;
       }
+//      std::cout << "mu_pred = " << mu_pred(0) << " " << mu_pred(1) << " " << mu_pred(2) << std::endl;
+//      std::cout << "aldnmark pred = " << mu_pred(landmark_idx) << " " << mu_pred(landmark_idx+1) << std::endl;
 
-      Eigen::Vector2f delta_robot_landmark(mu_pred(landmark_idx) - mu_pred(0),
-                                           mu_pred(landmark_idx + 1) - mu_pred(1));
-      float q = delta_robot_landmark.transpose().dot(delta_robot_landmark);
+      // vector between the estimated robot position and the estimated landmark position
+      Eigen::Vector2f d(mu_pred(landmark_idx) - mu_pred(0),
+                        mu_pred(landmark_idx + 1) - mu_pred(1));
 
+      float q = d.transpose().dot(d);
+
+//      std::cout << "delta_robot_ladnmark " << delta_robot_landmark.x() << " " << delta_robot_landmark.y() << "\n";
       // predicted observation based on the predicted robot new state (mu_pred)
-      Eigen::Vector3f z_pred(std::sqrt(q),
-                             std::atan2(delta_robot_landmark.y(), delta_robot_landmark.x()) - mu_pred(2),
-                             mu_pred(landmark_idx + 2));
+      Eigen::Vector2f z_pred(std::sqrt(q),
+                             normalized_angle(std::atan2(d.y(), d.x()) - mu_pred(2)));
+//      std::cout << "z pred " << z_pred << std::endl;
       // Fxj maps the lower dim h to H
-      Eigen::MatrixXf Fxj = Eigen::MatrixXf::Zero(6, 3 + 3 * n_landmarks);
+      Eigen::MatrixXf Fxj = Eigen::MatrixXf::Zero(5, 3 + 2 * n_landmarks);
       Fxj(0, 0) = 1;
       Fxj(1, 1) = 1;
       Fxj(2, 2) = 1;
       Fxj(3, landmark_idx) = 1;
       Fxj(4, landmark_idx + 1) = 1;
-      Fxj(5, landmark_idx + 2) = 1;
 
-      Eigen::Matrix<float, 3, 6> h;
+      Eigen::Matrix<float, 2, 5> h;
       float inv_sqrt_scale = 1.0f / std::sqrt(q);
       float inv_scale = 1.0f / q;
-      h << -delta_robot_landmark.x() * inv_sqrt_scale, -delta_robot_landmark.y() * inv_sqrt_scale, 0,
-           delta_robot_landmark.x() * inv_sqrt_scale, delta_robot_landmark.y() * inv_sqrt_scale, 0,
-           delta_robot_landmark.y() * inv_scale, -delta_robot_landmark.x() * inv_scale, -1,
-           -delta_robot_landmark.y() * inv_scale, delta_robot_landmark.x() * inv_scale, 0,
-           0, 0, 0, 0, 0, 1;
+      h << -d.x() * inv_sqrt_scale, -d.y() * inv_sqrt_scale, 0,
+            d.x() * inv_sqrt_scale, d.y() * inv_sqrt_scale,
+            d.y() * inv_scale, -d.x() * inv_scale, -1,
+           -d.y() * inv_scale, d.x() * inv_scale;
       Eigen::MatrixXf H = h * Fxj;
+//      std::cout << "H=\n" << H << std::endl;
+//      std::cout << "cov_pred \n" << cov_pred << std::endl;
+//      std::cout << "temp \n" <<  (H * cov_pred * H.transpose() + Q) << "\n";
       Eigen::MatrixXf K = cov_pred * H.transpose() * (H * cov_pred * H.transpose() + Q).inverse();
 
-      mu_pred += K * (Eigen::Vector3f(f.range, f.bearing, f.s) - z_pred);
-      cov_pred = (Eigen::MatrixXf::Identity(3 + 3 * n_landmarks, 3 + 3 * n_landmarks) - K * H) * cov_pred;
+//      std::cout << "K=\n" << K << std::endl;
+
+      mu_pred += K * (Eigen::Vector2f(f.range, f.bearing) - z_pred);
+      std::cout << "mu_pred\n" << mu_pred << std::endl;
+//      cov_correction += K * H;
+      cov_pred = (Eigen::MatrixXf::Identity(cov.rows(), cov.cols()) - K * H) * cov_pred;
+//      std::cout << H << "\n";
     }
+//    std::cout << "mu_correction \n" << mu_correction << "\n";
+//    std::cout << "cov_correction \n" << cov_correction << "\n";
+
+//    mu = mu_pred + mu_correction;
+//    cov = (Eigen::MatrixXf::Identity(cov.rows(), cov.cols()) - cov_correction) * cov_pred;
     mu = mu_pred;
     cov = cov_pred;
-  }
+//    std::cout << "cov_pred \n" << cov_pred << "\n";
+//    std::cout << "cov\n" << cov << "\n";
+//    std::cout << "mu\n" << mu << "\n";
+    std::cout << "=========================================================\n" << std::endl;
+    //std::cout << "mu = " << mu(0) << " " << mu(1) << " " << mu(2) << std::endl;
 
 }

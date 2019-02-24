@@ -2,6 +2,8 @@
 #define APPLICATION_H
 
 #include <SFML/Graphics.hpp>
+#include <Eigen/Dense>
+#include "feature.h"
 
 class Landmark;
 class Robot;
@@ -19,8 +21,9 @@ public:
 
 private:
   void render_robot();
-  void render_landmarks();
-
+  void render_landmarks(std::vector<Feature> const& observed_features);
+  void render_estimated_robot(Eigen::Vector3f const& pose);
+  void render_estimated_landmarks(Eigen::MatrixXf const& landmarks);
 
 private:
   sf::RenderWindow win;
@@ -42,6 +45,7 @@ private:
   const int ROBOT_VIEW_THICKNESS = 2;
   const sf::Color ROBOT_COLOR = sf::Color::Green;
   const sf::Color ROBOT_VIEW_COLOR = sf::Color::Yellow;
+  const sf::Color ROBOT_ESTIMATED_COLOR = sf::Color::Blue;
 
 
   const sf::Color BACKGROUND_COLOR = sf::Color::Black;

@@ -2,6 +2,7 @@
 #define ROBOT_H
 
 #include <Eigen/Dense>
+#include "feature.h"
 #include "landmark.h"
 
 #include <iostream>
@@ -46,7 +47,7 @@ public:
 
   void update(float dt);
 
-  std::vector<bool> get_observed_landmarks(std::vector< std::unique_ptr<Landmark> >const& landmarks);
+  std::vector<Feature> get_features(std::vector< std::unique_ptr<Landmark> >const& landmarks);
 
 
  private:

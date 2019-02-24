@@ -1,5 +1,6 @@
 #include "application.h"
 
+#include "ekf.h"
 #include "landmark.h"
 #include "robot.h"
 #include <iostream>
@@ -21,7 +22,8 @@ Application::~Application()
 
 void Application::exec()
 {
-  bool forward= false, left = false, right = false, backward = false;
+  EKF ekf(landmarks.size());
+  ekf.init(*robot);
   while (win.isOpen())
   {
     sf::Event event;
@@ -31,33 +33,33 @@ void Application::exec()
         win.close();
       if (event.type == sf::Event::KeyPressed)
       {
-        if (event.key.code == sf::Keyboard::Left)
-          robot->angular_velocity() = -ROBOT_ROTATION_STEP;
-        if (event.key.code == sf::Keyboard::Right)
-          robot->angular_velocity() = ROBOT_ROTATION_STEP;
-        if (event.key.code == sf::Keyboard::Up)
-          robot->velocity() = ROBOT_MOVE_STEP;
-        if (event.key.code == sf::Keyboard::Down)
-          robot->velocity() = -ROBOT_MOVE_STEP;
+        if (event.key.code == sf::Keyboard::Left) robot->angular_velocity() = -ROBOT_ROTATION_STEP;
+        if (event.key.code == sf::Keyboard::Right) robot->angular_velocity() = ROBOT_ROTATION_STEP;
+        if (event.key.code == sf::Keyboard::Up) robot->velocity() = ROBOT_MOVE_STEP;
+        if (event.key.code == sf::Keyboard::Down) robot->velocity() = -ROBOT_MOVE_STEP;
       }
       if (event.type == sf::Event::KeyReleased)
       {
-        if (event.key.code == sf::Keyboard::Left)
-          robot->angular_velocity() = 0;
-        if (event.key.code == sf::Keyboard::Right)
-          robot->angular_velocity() = 0;
-        if (event.key.code == sf::Keyboard::Up)
-          robot->velocity() = 0;
-        if (event.key.code == sf::Keyboard::Down)
-          robot->velocity() = 0;
+        if (event.key.code == sf::Keyboard::Left) robot->angular_velocity() = 0;
+        if (event.key.code == sf::Keyboard::Right) robot->angular_velocity() = 0;
+        if (event.key.code == sf::Keyboard::Up) robot->velocity() = 0;
+        if (event.key.code == sf::Keyboard::Down) robot->velocity() = 0;
       }
     }
     win.clear(BACKGROUND_COLOR);
 
     robot->update(DT);
+    std::vector<Feature> observed_features = robot->get_features(landmarks);
+    ekf.update(robot->velocity(), robot->angular_velocity(), DT, observed_features);
 
     render_robot();
-    render_landmarks();
+    render_landmarks(observed_features);
+
+    Eigen::Vector3f estimated_pose = ekf.estimated_pose();
+    render_estimated_robot(estimated_pose);
+    Eigen::MatrixXf estimated_landmarks = ekf.estimated_landmarks();
+    render_estimated_landmarks(estimated_landmarks);
+
     win.display();
   }
 }
@@ -111,19 +113,57 @@ void Application::render_robot()
   }
 }
 
-void Application::render_landmarks()
+void Application::render_landmarks(std::vector<Feature> const& observed_features)
 {
-  auto observed = robot->get_observed_landmarks(landmarks);
+  std::vector<bool> observed_landmarks(landmarks.size(), false);
+  for (auto const& f : observed_features)
+    observed_landmarks[static_cast<unsigned int>(f.id)] = true;
   for (unsigned int i = 0; i < landmarks.size(); ++i)
   {
     sf::CircleShape circle(LANDMARK_SIZE);
     int m = LANDMARK_SIZE;
     circle.setPosition(landmarks[i]->x - m, landmarks[i]->y - m);
-    if (observed[i]) {
+    if (observed_landmarks[i]) {
       circle.setFillColor(LANDMARK_OBSERVED_COLOR);
     } else {
       circle.setFillColor(LANDMARK_COLOR);
     }
     win.draw(circle);
+  }
+}
+
+void Application::render_estimated_robot(Eigen::Vector3f const& pose)
+{
+  int m = ROBOT_SIZE;
+  sf::CircleShape circle(ROBOT_SIZE);
+  circle.setFillColor(sf::Color::Transparent);
+  circle.setOutlineThickness(ROBOT_THICKNESS);
+  circle.setOutlineColor(ROBOT_ESTIMATED_COLOR);
+  circle.setPosition(pose.x() - m, pose.y() - m);
+
+  sf::RectangleShape rect(sf::Vector2f(ROBOT_SIZE * 2, ROBOT_THICKNESS));
+  rect.setRotation(TO_DEGREES(pose(2)));
+  rect.setFillColor(ROBOT_COLOR);
+  rect.setPosition(pose.x(), pose.y());
+
+  win.draw(circle);
+  win.draw(rect);
+}
+
+void Application::render_estimated_landmarks(const Eigen::MatrixXf &landmarks_est)
+{
+  for (int i = 0; i < landmarks_est.rows() / 2; ++i)
+  {
+    Eigen::Vector2f l = landmarks_est.block<2, 1>(i * 2, 0);
+    if (l.x() > 0 && l.y() > 0)
+    {
+      sf::CircleShape circle(5);
+      int m = 5;
+      circle.setPosition(l.x() - m, l.y() - m);
+      circle.setFillColor(sf::Color::Transparent);
+      circle.setOutlineThickness(2);
+      circle.setOutlineColor(sf::Color(150, 150, 150));
+      win.draw(circle);
+    }
   }
 }
