@@ -144,7 +144,7 @@ void Application::render_estimated_robot(Eigen::Vector3f const& pose)
 
   sf::RectangleShape rect(sf::Vector2f(ROBOT_SIZE * 2, ROBOT_THICKNESS));
   rect.setRotation(TO_DEGREES(pose(2)));
-  rect.setFillColor(ROBOT_COLOR);
+  rect.setFillColor(ROBOT_ESTIMATED_COLOR);
   rect.setPosition(pose.x(), pose.y());
 
   win.draw(circle);
