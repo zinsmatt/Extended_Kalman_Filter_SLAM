@@ -3,6 +3,8 @@
 
 #include <SFML/Graphics.hpp>
 #include <Eigen/Dense>
+
+#include "config.h"
 #include "feature.h"
 
 class Landmark;

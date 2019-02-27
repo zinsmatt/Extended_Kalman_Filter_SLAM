@@ -1,5 +1,5 @@
 #include "ekf.h"
-
+#include "config.h"
 /**
  * Extended Kalman filter
  *
@@ -62,8 +62,6 @@ void EKF::init(const Robot &robot)
   }
 }
 
-const float SENSOR_RANGE_NOISE = 0.1f;
-const float SENSOR_BEARING_NOISE = 0.01f;
 
 void EKF::update(float v, float w, float dt, std::vector<Feature> const& features)
 {
@@ -82,8 +80,8 @@ void EKF::update(float v, float w, float dt, std::vector<Feature> const& feature
 
   // Measurement noise
   Eigen::Matrix2f Q = Eigen::Matrix2f::Zero();
-  Q(0, 0) = SENSOR_RANGE_NOISE;
-  Q(1, 1) = SENSOR_BEARING_NOISE;
+  Q(0, 0) = SENSOR_RANGE_NOISE_STDDEV * SENSOR_RANGE_NOISE_STDDEV;
+  Q(1, 1) = SENSOR_BEARING_NOISE_STDDEV* SENSOR_BEARING_NOISE_STDDEV;
 
   if (std::abs(w) > EPS)
   {
@@ -176,14 +174,14 @@ void EKF::update(float v, float w, float dt, std::vector<Feature> const& feature
            -d.y() * inv_scale, d.x() * inv_scale;
       Eigen::MatrixXf H = h * Fxj;
 //      std::cout << "H=\n" << H << std::endl;
-//      std::cout << "cov_pred \n" << cov_pred << std::endl;
-//      std::cout << "temp \n" <<  (H * cov_pred * H.transpose() + Q) << "\n";
+      std::cout << "cov_pred \n" << cov_pred << std::endl;
+      std::cout << "temp \n" <<  (H * cov_pred * H.transpose() + Q) << "\n";
       Eigen::MatrixXf K = cov_pred * H.transpose() * (H * cov_pred * H.transpose() + Q).inverse();
 
 //      std::cout << "K=\n" << K << std::endl;
 
       mu_pred += K * (Eigen::Vector2f(f.range, f.bearing) - z_pred);
-      std::cout << "mu_pred\n" << mu_pred << std::endl;
+      //std::cout << "mu_pred\n" << mu_pred << std::endl;
 //      cov_correction += K * H;
       cov_pred = (Eigen::MatrixXf::Identity(cov.rows(), cov.cols()) - K * H) * cov_pred;
 //      std::cout << H << "\n";

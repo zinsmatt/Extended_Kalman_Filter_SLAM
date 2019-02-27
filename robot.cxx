@@ -4,6 +4,8 @@
 Robot::Robot(float x, float y, float angle) :
   pos_(x, y), orientation_(angle)
 {
+  range_noise_ = std::normal_distribution<float>(0.0f, SENSOR_RANGE_NOISE_STDDEV);
+  bearing_noise_= std::normal_distribution<float>(0.0f, SENSOR_BEARING_NOISE_STDDEV);
 }
 
 void Robot::set_orientation(float angle) {
@@ -36,8 +38,8 @@ std::vector<Feature> Robot::get_features(const std::vector<std::unique_ptr<Landm
   {
     Eigen::Vector2f landmark_pos(landmarks[i]->x, landmarks[i]->y);
     Eigen::Vector2f v = landmark_pos - pos_;
-    float d = v.norm();
-    float a = std::atan2(v.y(), v.x());
+    float d = v.norm() + range_noise_(random_generator_);
+    float a = std::atan2(v.y(), v.x()) + bearing_noise_(random_generator_);
     // force the angle difference to be in [-PI, PI]
     float angle_diff = a - orientation_;
     if (angle_diff > PI)

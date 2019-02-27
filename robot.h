@@ -2,19 +2,15 @@
 #define ROBOT_H
 
 #include <Eigen/Dense>
+
+#include "config.h"
 #include "feature.h"
 #include "landmark.h"
 
 #include <iostream>
 #include <memory>
+#include <random>
 #include <vector>
-
-#define TO_DEGREES(x) x * 57.2957795131f
-#define TO_RADIANS(x) x * 0.01745329251f
-#define PI 3.14159265359f
-
-const float ROBOT_FOV = TO_RADIANS(60);
-const float ROBOT_RANGE_VIEW = 150;
 
 class Robot
 {
@@ -57,6 +53,12 @@ public:
   float angular_velocity_ = 0;
   float fov_ = ROBOT_FOV;
   float range_ = ROBOT_RANGE_VIEW;
+
+// random to simulate noise
+  std::default_random_engine random_generator_;
+  std::normal_distribution<float> range_noise_;
+  std::normal_distribution<float> bearing_noise_;
+
 };
 
 #endif // ROBOT_H
