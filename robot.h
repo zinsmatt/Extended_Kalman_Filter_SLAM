@@ -56,6 +56,8 @@ public:
 
 // random to simulate noise
   std::default_random_engine random_generator_;
+  std::normal_distribution<float> position_noise_;
+  std::normal_distribution<float> orientation_noise_;
   std::normal_distribution<float> range_noise_;
   std::normal_distribution<float> bearing_noise_;
 

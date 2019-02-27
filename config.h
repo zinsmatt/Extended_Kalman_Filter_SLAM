@@ -8,6 +8,9 @@
 const float ROBOT_FOV = TO_RADIANS(60);
 const float ROBOT_RANGE_VIEW = 150;
 
+const float MOTION_NOISE_POSITON_STDDEV = 0.50f;
+const float MOTION_NOISE_ORIENTATION_STDDEV = 0.01f;
+
 const float SENSOR_RANGE_NOISE_STDDEV = 10.0f;
 const float SENSOR_BEARING_NOISE_STDDEV = 0.1f;
 

@@ -78,6 +78,14 @@ void EKF::update(float v, float w, float dt, std::vector<Feature> const& feature
   Eigen::MatrixXf cov_pred;   //
   Eigen::MatrixXf G;      // motion Jacobian
 
+  // Motion noise
+  // This assumes a zero-mean Gaussian noise on the final position and orientation.
+  // Maybe it would be better to have it directly on the commands u and w
+  Eigen::Matrix3f R = Eigen::Matrix3f::Zero();
+  R(0, 0) = MOTION_NOISE_POSITON_STDDEV * MOTION_NOISE_POSITON_STDDEV;
+  R(1, 1) = MOTION_NOISE_POSITON_STDDEV * MOTION_NOISE_POSITON_STDDEV;
+  R(2, 2) = MOTION_NOISE_ORIENTATION_STDDEV * MOTION_NOISE_ORIENTATION_STDDEV;
+
   // Measurement noise
   Eigen::Matrix2f Q = Eigen::Matrix2f::Zero();
   Q(0, 0) = SENSOR_RANGE_NOISE_STDDEV * SENSOR_RANGE_NOISE_STDDEV;
@@ -101,7 +109,7 @@ void EKF::update(float v, float w, float dt, std::vector<Feature> const& feature
 
     G = Eigen::MatrixXf::Identity(N, N) + F.transpose() * g * F;
 
-    cov_pred = G * cov * G.transpose();    // no motion noise for now
+    cov_pred = G * cov * G.transpose() + F.transpose() * R * F;
   }
   else
   {
