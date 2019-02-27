@@ -33,6 +33,7 @@ void Application::exec()
         win.close();
       if (event.type == sf::Event::KeyPressed)
       {
+        if (event.key.code == sf::Keyboard::Escape) win.close();
         if (event.key.code == sf::Keyboard::Left) robot->angular_velocity() = -ROBOT_ROTATION_STEP;
         if (event.key.code == sf::Keyboard::Right) robot->angular_velocity() = ROBOT_ROTATION_STEP;
         if (event.key.code == sf::Keyboard::Up) robot->velocity() = ROBOT_MOVE_STEP;

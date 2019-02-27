@@ -1,5 +1,26 @@
 #include "ekf.h"
 
+/**
+ * Extended Kalman filter
+ *
+ * Prediction step:
+ *  - predict the new state using the motion model
+ *  - linearize the motion model with the first degree Taylor expansion. For that, we need to calculate its jacobian
+ *  - predict the new covariance matrix (this includes the motion error)
+ *
+ * Correction step:
+ * - For each feature observed:
+ *      - if it's the first time we observe this feature, its state is initialized with this observation
+ *      - get the feature from the previous state
+ *      ...
+ *
+ *      - compute the gain matrix
+ *      - adjust the state to "go" in the direction of the obervation with a weighted sum of (feature_observed - feature_pred)
+ *      - adjust the covariance matrix using the gain *
+ *
+ */
+
+
 
 namespace {
 
