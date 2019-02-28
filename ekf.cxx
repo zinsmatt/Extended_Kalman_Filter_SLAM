@@ -77,14 +77,14 @@ void EKF::update(float v, float w, float dt, std::vector<Feature> const& feature
   Eigen::MatrixXf mu_pred = mu;
   Eigen::MatrixXf cov_pred;   //
   Eigen::MatrixXf G;      // motion Jacobian
+  Eigen::Matrix<float, 3, 2> V;     // motion noise Jacobian
 
   // Motion noise
-  // This assumes a zero-mean Gaussian noise on the final position and orientation.
-  // Maybe it would be better to have it directly on the commands u and w
+  // This assumes a zero-mean Gaussian noise on the commands v and w
+  Eigen::Matrix2f M = Eigen::Matrix2f::Zero();
   Eigen::Matrix3f R = Eigen::Matrix3f::Zero();
-  R(0, 0) = MOTION_NOISE_POSITON_STDDEV * MOTION_NOISE_POSITON_STDDEV;
-  R(1, 1) = MOTION_NOISE_POSITON_STDDEV * MOTION_NOISE_POSITON_STDDEV;
-  R(2, 2) = MOTION_NOISE_ORIENTATION_STDDEV * MOTION_NOISE_ORIENTATION_STDDEV;
+   M(0, 0) = COMMAND_NOISE_VELOCITY_STDDEV * COMMAND_NOISE_VELOCITY_STDDEV;
+   M(1, 1) = COMMAND_NOISE_ANGULAR_VELOCITY_STDDEV * COMMAND_NOISE_ANGULAR_VELOCITY_STDDEV;
 
   // Measurement noise
   Eigen::Matrix2f Q = Eigen::Matrix2f::Zero();
@@ -103,6 +103,15 @@ void EKF::update(float v, float w, float dt, std::vector<Feature> const& feature
     mu_pred(1) += motion_y;
     mu_pred(2) += delta_orientation;
 
+    // motion noise jacobian
+    V(0, 0) = (-std::sin(mu(2)) + std::sin(mu(2) + w * dt)) / w;
+    V(0, 1) = v * (std::sin(mu(2)) - std::sin(mu(2) + w * dt)) / (w * w) + v * std::cos(mu(2) + w * dt) * dt / w;
+    V(1, 0) = (std::cos(mu(2)) - std::cos(mu(2) + w * dt)) / w;
+    V(1, 1) = -v * (std::cos(mu(2)) - std::cos(mu(2) + w * dt)) / (w * w) + v * std::sin(mu(2) + w * dt) * dt / w;
+    V(2, 0) = 0;
+    V(2, 1) = dt;
+    R = V * M * V.transpose();      // create the motion noise covariance
+
     Eigen::Matrix3f g = Eigen::Matrix3f::Zero();
     g(0, 2) = -r * std::cos(mu(2)) + r * std::cos(mu(2) + w * dt);
     g(1, 2) = -r * std::sin(mu(2)) + r * std::sin(mu(2) + w * dt);
@@ -120,12 +129,21 @@ void EKF::update(float v, float w, float dt, std::vector<Feature> const& feature
     mu_pred(0) += motion_x;
     mu_pred(1) += motion_y;
 
+    // motion noise jacobian
+    V(0, 0) = std::cos(mu(2)) * dt;
+    V(1, 0) = std::sin(mu(2)) * dt;
+    V(2, 0) = 0;
+    V(0, 1) = 0;
+    V(1, 1) = 0;
+    V(2, 1) = dt;   // not sure
+    R = V * M * V.transpose();        // create the motion noise covariance
+
     Eigen::Matrix3f g = Eigen::Matrix3f::Zero();
     g(0, 2) = -v * dt * std::sin(mu(2));
     g(1, 2) = v * dt * std::cos(mu(2));
 
     G = Eigen::MatrixXf::Identity(N, N) + F.transpose() * g * F;
-    cov_pred = G * cov * G.transpose();
+    cov_pred = G * cov * G.transpose() + F.transpose() * R * F;
   }
 
 

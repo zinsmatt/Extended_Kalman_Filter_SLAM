@@ -4,8 +4,8 @@
 Robot::Robot(float x, float y, float angle) :
   pos_(x, y), orientation_(angle)
 {
-  position_noise_ = std::normal_distribution<float>(0.0f, MOTION_NOISE_POSITON_STDDEV);
-  orientation_noise_ = std::normal_distribution<float>(0.0f, MOTION_NOISE_ORIENTATION_STDDEV);
+  velocity_noise_ = std::normal_distribution<float>(0.0f, COMMAND_NOISE_VELOCITY_STDDEV);
+  angular_velocity_noise_ = std::normal_distribution<float>(0.0f, COMMAND_NOISE_ANGULAR_VELOCITY_STDDEV);
   range_noise_ = std::normal_distribution<float>(0.0f, SENSOR_RANGE_NOISE_STDDEV);
   bearing_noise_= std::normal_distribution<float>(0.0f, SENSOR_BEARING_NOISE_STDDEV);
 }
@@ -21,9 +21,13 @@ void Robot::set_orientation(float angle) {
 /// update the robot assuming a forward movement with a constant velocity and a final rotation
 void Robot::update(float dt)
 {
-  orientation_ += angular_velocity_ * dt;
+  // add noise in the angular velocity
+  if (velocity_ > 0)
+    velocity_ += velocity_noise_(random_generator_);
+  // add additional noise on the velocity command
   if (angular_velocity_ > 0)
-    orientation_ += orientation_noise_(random_generator_);
+    angular_velocity_ += angular_velocity_noise_(random_generator_);
+  orientation_ += angular_velocity_ * dt;
   if (orientation_ > PI) {
     orientation_ -= 2 * PI;
   }
@@ -32,11 +36,6 @@ void Robot::update(float dt)
   }
   pos_.x() += std::cos(orientation_) * velocity_ * dt;
   pos_.y() += std::sin(orientation_) * velocity_ * dt;
-  if (velocity_ > 0)
-  {
-    pos_.x() += position_noise_(random_generator_);
-    pos_.y() += position_noise_(random_generator_);
-  }
 }
 
 // returns the list of features observed by the robot
