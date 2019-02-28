@@ -45,7 +45,6 @@ public:
 
   std::vector<Feature> get_features(std::vector< std::unique_ptr<Landmark> >const& landmarks);
 
-
  private:
   Eigen::Vector2f pos_;
   float orientation_;

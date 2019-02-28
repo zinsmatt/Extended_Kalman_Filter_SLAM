@@ -1,6 +1,5 @@
 #include "application.h"
 
-#include "ekf.h"
 #include "landmark.h"
 #include "robot.h"
 #include <iostream>
@@ -34,10 +33,10 @@ void Application::exec()
       if (event.type == sf::Event::KeyPressed)
       {
         if (event.key.code == sf::Keyboard::Escape) win.close();
-        if (event.key.code == sf::Keyboard::Left) robot->angular_velocity() = -ROBOT_ROTATION_STEP;
-        if (event.key.code == sf::Keyboard::Right) robot->angular_velocity() = ROBOT_ROTATION_STEP;
-        if (event.key.code == sf::Keyboard::Up) robot->velocity() = ROBOT_MOVE_STEP;
-        if (event.key.code == sf::Keyboard::Down) robot->velocity() = -ROBOT_MOVE_STEP;
+        if (event.key.code == sf::Keyboard::Left) robot->angular_velocity() = -ROBOT_ROTATION_SPEED;
+        if (event.key.code == sf::Keyboard::Right) robot->angular_velocity() = ROBOT_ROTATION_SPEED;
+        if (event.key.code == sf::Keyboard::Up) robot->velocity() = ROBOT_MOVE_SPEED;
+        if (event.key.code == sf::Keyboard::Down) robot->velocity() = -ROBOT_MOVE_SPEED;
       }
       if (event.type == sf::Event::KeyReleased)
       {
@@ -60,6 +59,9 @@ void Application::exec()
     render_estimated_robot(estimated_pose);
     Eigen::MatrixXf estimated_landmarks = ekf.estimated_landmarks();
     render_estimated_landmarks(estimated_landmarks);
+
+    render_robot_ellipse(ekf);
+    render_landmarks_ellipse(ekf);
 
     win.display();
   }
@@ -167,4 +169,98 @@ void Application::render_estimated_landmarks(const Eigen::MatrixXf &landmarks_es
       win.draw(circle);
     }
   }
+}
+
+void Application::render_robot_ellipse(const EKF &ekf)
+{
+  auto ellipse = ellipse_from_cov(ekf.get_robot_cov());
+  Eigen::Vector3f state = ekf.estimated_pose();
+
+  draw_ellipse(state.head(2),ellipse, ROBOT_ELLIPSE_COLOR);
+}
+
+void Application::render_landmarks_ellipse(const EKF &ekf)
+{
+  for (int i = 0; i < static_cast<int>(landmarks.size()); ++i)
+  {
+    Eigen::Matrix2f cov = ekf.get_landmark_cov(i);
+    if (cov(0, 0) < COV_INF)
+    {
+      auto ellipse(ellipse_from_cov(cov));
+      Eigen::Vector2f position = ekf.estimated_landmark(i);
+      draw_ellipse(position, ellipse, LANDMAKR_ELLIPSE_COLOR);
+    }
+  }
+}
+
+std::tuple<float, float, float> Application::ellipse_from_cov(const Eigen::Matrix2f &cov)
+{
+  Eigen::SelfAdjointEigenSolver<Eigen::Matrix2f> solver(cov);
+  float e0 = std::sqrt(solver.eigenvalues()(0));
+  float e1 = std::sqrt(solver.eigenvalues()(1));
+
+  if (e0 > e1)
+  {
+    float theta = std::atan2(solver.eigenvectors()(1, 0),
+                             solver.eigenvectors()(0, 0));
+    return std::make_tuple(e0, e1, theta);
+  }
+  else
+  {
+    float theta = std::atan2(solver.eigenvectors()(1, 1),
+                             solver.eigenvectors()(0, 1));
+    return std::make_tuple(e1, e0, theta);
+  }
+}
+
+void Application::draw_ellipse(const Eigen::Vector2f &position, std::tuple<float, float, float> ellipse, sf::Color const& color)
+{
+  sf::ConvexShape convex;
+  convex.setFillColor(sf::Color::Transparent);
+  convex.setOutlineThickness(ELLIPSE_THICKNESS);
+  convex.setOutlineColor(color);
+  size_t nb_points = ELLIPSE_NB_POINTS;
+  convex.setPointCount(nb_points);
+  float a = std::get<0>(ellipse) * ELLIPSE_SCALE;
+  float b = std::get<1>(ellipse) * ELLIPSE_SCALE;
+  float theta = std::get<2>(ellipse);
+
+  float step = TO_RADIANS(360.0f) / (nb_points - 1);
+  float angle = 0;
+  for (unsigned int i = 0; i < nb_points; ++i)
+  {
+    sf::Vector2f p(std::cos(angle) * a,
+                   std::sin(angle) * b);
+    convex.setPoint(i, p);
+    angle += step;
+  }
+  convex.setRotation(TO_DEGREES(theta));
+  convex.setPosition(position.x(), position.y());
+
+  // draw the axes
+  sf::RectangleShape rect0(sf::Vector2f(a, ELLIPSE_THICKNESS));
+  rect0.setRotation(TO_DEGREES(theta));
+  rect0.setFillColor(color);
+  rect0.setPosition(position.x(), position.y());
+
+  sf::RectangleShape rect1(sf::Vector2f(a, ELLIPSE_THICKNESS));
+  rect1.setRotation(TO_DEGREES(theta) + 180);
+  rect1.setFillColor(color);
+  rect1.setPosition(position.x(), position.y());
+
+  sf::RectangleShape rect2(sf::Vector2f(b, ELLIPSE_THICKNESS));
+  rect2.setRotation(TO_DEGREES(theta) + 90);
+  rect2.setFillColor(color);
+  rect2.setPosition(position.x(), position.y());
+
+  sf::RectangleShape rect3(sf::Vector2f(b, ELLIPSE_THICKNESS));
+  rect3.setRotation(TO_DEGREES(theta) - 90);
+  rect3.setFillColor(color);
+  rect3.setPosition(position.x(), position.y());
+
+  win.draw(convex);
+  win.draw(rect0);
+  win.draw(rect1);
+  win.draw(rect2);
+  win.draw(rect3);
 }

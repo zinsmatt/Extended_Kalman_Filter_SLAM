@@ -1,11 +1,11 @@
 #include "robot.h"
-
+#include "config.h"
 
 Robot::Robot(float x, float y, float angle) :
   pos_(x, y), orientation_(angle)
 {
-  velocity_noise_ = std::normal_distribution<float>(0.0f, COMMAND_NOISE_VELOCITY_STDDEV);
-  angular_velocity_noise_ = std::normal_distribution<float>(0.0f, COMMAND_NOISE_ANGULAR_VELOCITY_STDDEV);
+  velocity_noise_ = std::normal_distribution<float>(0.0f, 0); //COMMAND_NOISE_VELOCITY_STDDEV);
+  angular_velocity_noise_ = std::normal_distribution<float>(0.0f, 0); //COMMAND_NOISE_ANGULAR_VELOCITY_STDDEV);
   range_noise_ = std::normal_distribution<float>(0.0f, SENSOR_RANGE_NOISE_STDDEV);
   bearing_noise_= std::normal_distribution<float>(0.0f, SENSOR_BEARING_NOISE_STDDEV);
 }
@@ -21,12 +21,25 @@ void Robot::set_orientation(float angle) {
 /// update the robot assuming a forward movement with a constant velocity and a final rotation
 void Robot::update(float dt)
 {
+  // re-adjust velocity and angular velocity because keyboard events are not well handled when multiple keys are pressed
+  if (velocity_ < 0) velocity_ = -ROBOT_MOVE_SPEED;
+  if (velocity_ > 0) velocity_ = ROBOT_MOVE_SPEED;
+  if (angular_velocity_ < 0) angular_velocity_ = -ROBOT_ROTATION_SPEED;
+  if (angular_velocity_ > 0) angular_velocity_ = ROBOT_ROTATION_SPEED;
+
+  // adjust the command noise based on the current velocity and angular velocity
+  velocity_noise_ = std::normal_distribution<float>(0.0f, ALPHA1 * std::abs(velocity_) + ALPHA2 * std::abs(angular_velocity_));
+  angular_velocity_noise_ = std::normal_distribution<float>(0.0f, ALPHA3 * std::abs(velocity_) + ALPHA4 * std::abs(angular_velocity_));
+
+
   // add noise in the angular velocity
   if (velocity_ > 0)
     velocity_ += velocity_noise_(random_generator_);
+
   // add additional noise on the velocity command
   if (angular_velocity_ > 0)
     angular_velocity_ += angular_velocity_noise_(random_generator_);
+
   orientation_ += angular_velocity_ * dt;
   if (orientation_ > PI) {
     orientation_ -= 2 * PI;

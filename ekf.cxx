@@ -58,7 +58,7 @@ void EKF::init(const Robot &robot)
   // initialize covariance matrix (robot position is certain at start)
   for (int i = 3; i < N; ++i)
   {
-    cov(i, i) = 1e5;
+    cov(i, i) = COV_INF;
   }
 }
 
@@ -83,8 +83,8 @@ void EKF::update(float v, float w, float dt, std::vector<Feature> const& feature
   // This assumes a zero-mean Gaussian noise on the commands v and w
   Eigen::Matrix2f M = Eigen::Matrix2f::Zero();
   Eigen::Matrix3f R = Eigen::Matrix3f::Zero();
-   M(0, 0) = COMMAND_NOISE_VELOCITY_STDDEV * COMMAND_NOISE_VELOCITY_STDDEV;
-   M(1, 1) = COMMAND_NOISE_ANGULAR_VELOCITY_STDDEV * COMMAND_NOISE_ANGULAR_VELOCITY_STDDEV;
+   M(0, 0) = std::pow(ALPHA1 * std::abs(v) + ALPHA2 * std::abs(w), 2.0f);
+   M(1, 1) = std::pow(ALPHA3 * std::abs(v) + ALPHA4 * std::abs(w), 2.0f);
 
   // Measurement noise
   Eigen::Matrix2f Q = Eigen::Matrix2f::Zero();
